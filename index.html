@@ -83,11 +83,11 @@ th { background:#eee; }
 <script>
 let canali = [];
 let windows = [];
-let ultimoAggiornamento = new Date().getHours();
+let finestreProcessate = [];
 
 // Aggiorna orologio live
 function updateClock(){
-  const now=new Date();
+  const now = new Date();
   document.getElementById("clock").textContent = "⏰ Ora: "+now.toLocaleTimeString();
 }
 setInterval(updateClock,1000);
@@ -209,6 +209,7 @@ function addWindow(){
   const end=document.getElementById("endTime").value;
   if(!start||!end) return alert("Orari non validi");
   windows.push({start,end});
+  finestreProcessate.push(false);
   renderWindows();
 }
 
@@ -223,7 +224,11 @@ function renderWindows(){
   });
 }
 
-function removeWindow(i){ windows.splice(i,1); renderWindows(); }
+function removeWindow(i){ 
+  windows.splice(i,1); 
+  finestreProcessate.splice(i,1);
+  renderWindows(); 
+}
 
 // --- Storici ---
 function aggiornaHeaderStorici(){
@@ -233,23 +238,28 @@ function aggiornaHeaderStorici(){
 }
 
 function aggiornaStorici(){
-  const now=new Date();
-  const hh=now.getHours().toString().padStart(2,'0');
-  const mm=now.getMinutes().toString().padStart(2,'0');
+  const now = new Date();
+  const hhmm = now.getHours().toString().padStart(2,'0') + ":" + now.getMinutes().toString().padStart(2,'0');
 
-  windows.forEach(w=>{
-    if(hh+":"+mm === w.end){
-      const tr=document.createElement('tr');
-      tr.innerHTML=`<td>${hh}:${mm}</td>`;
-      canali.forEach(c=>c.subcanali.forEach(s=>{
-        const val=document.getElementById(`input_${c.id}_${s.id}`).value;
-        tr.innerHTML+=`<td>${val.replace(/\n/g,"<br>")}</td>`;
-        document.getElementById(`input_${c.id}_${s.id}`).value="";
+  windows.forEach((w, index) => {
+    if(hhmm === w.end && !finestreProcessate[index]){
+      finestreProcessate[index] = true;
+
+      const tr = document.createElement('tr');
+      tr.innerHTML = `<td>${hhmm}</td>`;
+      canali.forEach(c => c.subcanali.forEach(s => {
+        const val = document.getElementById(`input_${c.id}_${s.id}`).value;
+        tr.innerHTML += `<td>${val.replace(/\n/g,"<br>")}</td>`;
+        document.getElementById(`input_${c.id}_${s.id}`).value = "";
       }));
       document.querySelector('#storici tbody').appendChild(tr);
+
       document.getElementById("alertSound").play();
       document.body.classList.add("flash");
       setTimeout(()=>document.body.classList.remove("flash"),2000);
+    }
+    if(hhmm !== w.end) {
+      finestreProcessate[index] = false;
     }
   });
 }
@@ -285,9 +295,10 @@ function exportExcel(){
 
 // --- Avvio iniziale ---
 aggiungiCanale("Canale iniziale");
-
 aggiornaHeaderStorici();
 setInterval(aggiornaStorici,1000);
 </script>
 </body>
 </html>
+
+
